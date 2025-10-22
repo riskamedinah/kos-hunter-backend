@@ -38,6 +38,7 @@ class User extends Authenticatable
         return $this->role === 'owner';
     }
 
+
     public function isSociety(): bool
     {
         return $this->role === 'society';
