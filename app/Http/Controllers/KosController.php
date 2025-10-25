@@ -97,4 +97,32 @@ class KosController extends Controller
             'message' => 'Kos deleted successfully'
         ], 200);
     }
+
+public function listForSociety(Request $request)
+{
+    $user = Auth::user();
+
+    // filter parameters
+    $address = $request->query('address');
+    $gender = $request->query('gender');
+    $priceMin = $request->query('price_min');
+    $priceMax = $request->query('price_max');
+
+    $query = Kos::with(['images' => function ($q) {
+        $q->orderBy('created_at', 'asc')->limit(1);
+    }, 'user:id,name'])
+    ->when($address, fn($q) => $q->where('address', 'like', "%$address%"))
+    ->when($gender, fn($q) => $q->where('gender', $gender))
+    ->when($priceMin, fn($q) => $q->where('price_per_month', '>=', $priceMin))
+    ->when($priceMax, fn($q) => $q->where('price_per_month', '<=', $priceMax))
+    ->orderBy('created_at', 'desc');
+
+    // pagination
+    $kos = $query->paginate(10);
+
+    return response()->json([
+        'message' => 'List kos fetched successfully',
+        'data' => $kos
+    ], 200);
+}
 }
