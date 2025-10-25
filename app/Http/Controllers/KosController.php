@@ -95,6 +95,6 @@ class KosController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Kos deleted successfully'
-        ], 204);
+        ], 200);
     }
 }

@@ -17,6 +17,11 @@ class Kos extends Model
         'gender'
     ];
 
+     public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+    
     public function facilities()
     {
         return $this->hasMany(KosFacility::class);
