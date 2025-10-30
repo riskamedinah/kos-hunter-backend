@@ -13,22 +13,16 @@ class Review extends Model
         'kos_id',
         'user_id',
         'rating',
-        'comment',
-        'parent_id'
+        'comment'
     ];
 
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function kos()
     {
-        return $this->belongsTo(Kos::class);
-    }
-
-    public function replies()
-    {
-        return $this->hasMany(Review::class, 'parent_id');
+        return $this->belongsTo(Kos::class, 'kos_id');
     }
 }

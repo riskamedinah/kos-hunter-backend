@@ -28,7 +28,7 @@ class AuthController extends Controller
 
         $user = User::create($userData);
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $token = explode('|', $user->createToken('auth_token')->plainTextToken)[1];
 
         return response()->json([
             'message' => 'User registered successfully',
@@ -47,7 +47,7 @@ class AuthController extends Controller
             ]);
         }
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $token = explode('|', $user->createToken('auth_token')->plainTextToken)[1];
 
         return response()->json([
             'message' => 'Login successful',

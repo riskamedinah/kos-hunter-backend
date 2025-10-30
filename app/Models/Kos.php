@@ -14,21 +14,31 @@ class Kos extends Model
         'name',
         'address',
         'price_per_month',
-        'gender'
+        'gender',
     ];
 
-     public function user()
+    public function user()
     {
         return $this->belongsTo(User::class);
     }
-    
+
     public function facilities()
     {
-        return $this->hasMany(KosFacility::class);
+        return $this->hasMany(KosFacility::class, 'kos_id');
     }
 
     public function images()
     {
-        return $this->hasMany(KosImage::class);
+        return $this->hasMany(KosImage::class, 'kos_id');
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany(Review::class, 'kos_id');
+    }
+
+    public function rooms()
+    {
+        return $this->hasMany(Room::class, 'kos_id');
     }
 }

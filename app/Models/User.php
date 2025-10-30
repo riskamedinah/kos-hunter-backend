@@ -15,9 +15,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'phone',
         'role',
-        'kos_name',
-        'address',
     ];
 
     protected $hidden = [
@@ -25,19 +24,29 @@ class User extends Authenticatable
         'remember_token',
     ];
 
-    protected function casts(): array
+    protected $casts = [
+        'password' => 'hashed',
+    ];
+
+    public function kos()
     {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
+        return $this->hasMany(Kos::class, 'user_id');
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany(Review::class, 'user_id');
+    }
+
+    public function books()
+    {
+        return $this->hasMany(Book::class, 'user_id');
     }
 
     public function isOwner(): bool
     {
         return $this->role === 'owner';
     }
-
 
     public function isSociety(): bool
     {

@@ -6,27 +6,23 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
-    public function up()
-{
-    Schema::create('reviews', function (Blueprint $table) {
-        $table->id();
-        $table->unsignedBigInteger('kos_id');
-        $table->unsignedBigInteger('user_id');
-        $table->integer('rating')->checkBetween(1,5);
-        $table->text('comment')->nullable();
-        $table->timestamps();
+    public function up(): void
+    {
+        Schema::create('reviews', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('kos_id');
+            $table->text('comment')->nullable();
+            $table->unsignedBigInteger('user_id');
+            $table->timestamps();
 
-        $table->foreign('kos_id')->references('id')->on('kos')->onDelete('cascade');
-        $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
-    });
-}
+            $table->foreign('kos_id')->references('id')->on('kos')->onDelete('cascade');
 
-    /**
-     * Reverse the migrations.
-     */
+            $table->foreign('id')->references('id')->on('kos')->onDelete('cascade');
+
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+        });
+    }
+
     public function down(): void
     {
         Schema::dropIfExists('reviews');

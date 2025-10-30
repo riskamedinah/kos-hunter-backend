@@ -13,6 +13,6 @@ class KosImage extends Model
 
     public function kos()
     {
-        return $this->belongsTo(Kos::class);
+        return $this->belongsTo(Kos::class, 'kos_id');
     }
 }
