@@ -11,14 +11,11 @@ return new class extends Migration
         Schema::create('reviews', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('kos_id');
-            $table->text('comment')->nullable();
             $table->unsignedBigInteger('user_id');
+            $table->text('comment')->nullable();
             $table->timestamps();
 
             $table->foreign('kos_id')->references('id')->on('kos')->onDelete('cascade');
-
-            $table->foreign('id')->references('id')->on('kos')->onDelete('cascade');
-
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
         });
     }

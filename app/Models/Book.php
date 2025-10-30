@@ -9,18 +9,18 @@ class Book extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'room_id',
-        'user_id',
-        'start_date',
-        'end_date',
-        'status',
-    ];
+protected $fillable = [
+    'kos_id',
+    'user_id',
+    'start_date',
+    'end_date',
+    'status',
+];
 
-    public function room()
-    {
-        return $this->belongsTo(Room::class);
-    }
+ public function kos()
+{
+    return $this->belongsTo(Kos::class, 'kos_id');
+}
 
     public function user()
     {

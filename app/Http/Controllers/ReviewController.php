@@ -9,48 +9,61 @@ use Illuminate\Support\Facades\Auth;
 
 class ReviewController extends Controller
 {
-    // Lihat semua komentar di 1 kos
     public function index($kosId)
     {
-        $reviews = Review::with(['user:id,name', 'replies.user:id,name'])
+        $reviews = Review::with(['user:id,name'])
             ->where('kos_id', $kosId)
-            ->whereNull('parent_id')
             ->latest()
             ->get();
 
-        return response()->json($reviews);
+        return response()->json([
+            'status' => 'success',
+            'message' => 'List review berhasil diambil',
+            'data' => $reviews
+        ], 200);
     }
 
-    // Tambah komentar (Society)
     public function store(Request $request, $kosId)
     {
         $user = Auth::user();
 
+        if (!$user->isSociety()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized, hanya society yang bisa menambahkan review',
+                'data' => null
+            ], 403);
+        }
+
         $request->validate([
             'comment' => 'required|string',
-            'rating' => 'nullable|integer|min:1|max:5',
         ]);
 
+        $kos = Kos::findOrFail($kosId);
+
         $review = Review::create([
-            'kos_id' => $kosId,
+            'kos_id' => $kos->id,
             'user_id' => $user->id,
-            'rating' => $request->rating,
             'comment' => $request->comment,
         ]);
 
         return response()->json([
-            'message' => 'Comment added successfully',
+            'status' => 'success',
+            'message' => 'Review berhasil ditambahkan',
             'data' => $review
-        ]);
+        ], 201);
     }
 
-    // Balas komentar (Owner)
     public function reply(Request $request, $reviewId)
     {
         $user = Auth::user();
 
         if (!$user->isOwner()) {
-            return response()->json(['message' => 'Unauthorized, only owner can reply'], 403);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized, hanya owner yang bisa membalas review',
+                'data' => null
+            ], 403);
         }
 
         $request->validate([
@@ -63,12 +76,12 @@ class ReviewController extends Controller
             'kos_id' => $parentReview->kos_id,
             'user_id' => $user->id,
             'comment' => $request->comment,
-            'parent_id' => $parentReview->id,
         ]);
 
         return response()->json([
-            'message' => 'Reply added successfully',
+            'status' => 'success',
+            'message' => 'Balasan berhasil dikirim',
             'data' => $reply
-        ]);
+        ], 201);
     }
 }

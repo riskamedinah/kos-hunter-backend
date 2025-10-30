@@ -2,104 +2,167 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Booking;
-use App\Models\Room;
+use App\Models\Book;
+use App\Models\Kos;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class BookingController extends Controller
 {
-    // 📍 List bookings (Society hanya lihat miliknya)
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
 
-        $bookings = Booking::with(['room.kos:id,name,address', 'society:id,name'])
-            ->when($user->role === 'society', fn($q) => $q->where('society_id', $user->id))
-            ->orderBy('created_at', 'desc')
-            ->paginate(10);
+        $query = Book::with(['kos:id,name,address,user_id', 'user:id,name'])
+            ->orderBy('created_at', 'desc');
+
+        if ($user->isSociety()) {
+            $query->where('user_id', $user->id);
+        }
+
+        if ($user->isOwner()) {
+            $query->whereHas('kos', fn($q) => $q->where('user_id', $user->id));
+        }
+
+        $bookings = $query->paginate(10);
 
         return response()->json([
             'status' => 'success',
+            'message' => 'Daftar booking berhasil diambil',
             'data' => $bookings
         ], 200);
     }
 
-    // 🧾 Create booking
     public function store(Request $request)
     {
         $user = Auth::user();
 
-        if ($user->role !== 'society') {
-            return response()->json(['message' => 'Only society can make a booking'], 403);
+        if (!$user->isSociety()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Hanya society yang dapat melakukan booking',
+                'data' => null
+            ], 403);
         }
 
         $validated = $request->validate([
-            'room_id' => 'required|exists:rooms,id',
-            'check_in_date' => 'required|date|after_or_equal:today',
-            'check_out_date' => 'required|date|after:check_in_date',
+            'kos_id' => 'required|exists:kos,id',
+            'start_date' => 'required|date|after_or_equal:today',
+            'end_date' => 'required|date|after:start_date',
         ]);
 
-        $room = Room::findOrFail($validated['room_id']);
-
-        // Hitung total harga berdasarkan durasi (hari)
-        $days = (strtotime($validated['check_out_date']) - strtotime($validated['check_in_date'])) / 86400;
-        $total = $days * $room->price_per_day;
-
-        $booking = Booking::create([
-            'society_id' => $user->id,
-            'room_id' => $room->id,
-            'check_in_date' => $validated['check_in_date'],
-            'check_out_date' => $validated['check_out_date'],
-            'total_price' => $total,
+        $book = Book::create([
+            'kos_id' => $validated['kos_id'],
+            'user_id' => $user->id,
+            'start_date' => $validated['start_date'],
+            'end_date' => $validated['end_date'],
             'status' => 'pending',
         ]);
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Booking created successfully',
-            'data' => $booking
+            'message' => 'Booking berhasil dibuat',
+            'data' => $book
         ], 201);
     }
 
-    // ✏️ Update status booking (owner)
+    public function print($id)
+    {
+        $user = Auth::user();
+        $book = Book::with(['kos', 'user'])->findOrFail($id);
+
+        if ($book->user_id !== $user->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Tidak dapat mencetak booking milik orang lain',
+                'data' => null
+            ], 403);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Bukti booking berhasil diambil',
+            'data' => [
+                'booking_code' => 'BOOK-' . str_pad($book->id, 5, '0', STR_PAD_LEFT),
+                'kos_name' => $book->kos->name,
+                'address' => $book->kos->address,
+                'start_date' => $book->start_date,
+                'end_date' => $book->end_date,
+                'status' => $book->status,
+                'society_name' => $book->user->name,
+                'created_at' => $book->created_at,
+            ]
+        ], 200);
+    }
+
     public function updateStatus(Request $request, $id)
     {
         $user = Auth::user();
 
         if (!$user->isOwner()) {
-            return response()->json(['message' => 'Only owner can update booking status'], 403);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Hanya owner yang dapat mengubah status booking',
+                'data' => null
+            ], 403);
         }
 
         $validated = $request->validate([
-            'status' => 'required|in:approved,rejected,completed,cancelled'
+            'status' => 'required|in:pending,accept,reject'
         ]);
 
-        $booking = Booking::findOrFail($id);
-        $booking->update(['status' => $validated['status']]);
+        $book = Book::with('kos')->findOrFail($id);
+
+        if ($book->kos->user_id !== $user->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Forbidden, bukan kos milik Anda',
+                'data' => null
+            ], 403);
+        }
+
+        $book->update(['status' => $validated['status']]);
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Booking status updated successfully',
-            'data' => $booking
+            'message' => 'Status booking berhasil diperbarui',
+            'data' => $book
         ], 200);
     }
 
-    // ❌ Delete booking (opsional)
-    public function destroy($id)
+    public function history(Request $request)
     {
         $user = Auth::user();
-        $booking = Booking::findOrFail($id);
 
-        if ($booking->society_id !== $user->id && !$user->isOwner()) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+        if (!$user->isOwner()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Hanya owner yang dapat melihat riwayat booking',
+                'data' => null
+            ], 403);
         }
 
-        $booking->delete();
+        $date = $request->query('date');
+        $month = $request->query('month');
+
+        $query = Book::with(['user:id,name', 'kos:id,name,user_id'])
+            ->whereHas('kos', fn($q) => $q->where('user_id', $user->id));
+
+        if ($date) {
+            $query->whereDate('created_at', $date);
+        }
+
+        if ($month) {
+            $query->whereMonth('created_at', $month);
+        }
+
+        $bookings = $query->orderBy('created_at', 'desc')->get();
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Booking deleted successfully'
+            'message' => 'Riwayat booking berhasil diambil',
+            'data' => $bookings
         ], 200);
     }
 }

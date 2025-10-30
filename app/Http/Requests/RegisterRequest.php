@@ -13,27 +13,21 @@ class RegisterRequest extends FormRequest
 
     public function rules(): array
     {
-        $rules = [
+        return [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
             'role' => 'required|in:society,owner',
+            'phone' => 'required|string|max:15|unique:users',
         ];
-
-        if ($this->role === 'owner') {
-            $rules['kos_name'] = 'required|string|max:255';
-            $rules['address'] = 'required|string';
-        }
-
-        return $rules;
     }
 
     public function messages(): array
     {
         return [
             'role.in' => 'Role must be either society or owner.',
-            'kos_name.required' => 'Kos name is required for owner role.',
-            'address.required' => 'Address is required for owner role.',
+            'phone.required' => 'Phone number is required.',
+            'phone.unique' => 'Phone number already registered.',
         ];
     }
 }
